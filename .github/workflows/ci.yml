@@ -1,0 +1,259 @@
+name: 🧪 Sürekli Entegrasyon (CI)
+
+# Bu workflow ne zaman çalışacak?
+on:
+  # Her push'ta çalış
+  push:
+    branches: [ main, develop, feature/* ]
+  
+  # Pull request'lerde çalış
+  pull_request:
+    branches: [ main, develop ]
+  
+  # Manuel olarak da çalıştırılabilir
+  workflow_dispatch:
+
+# Environment variables
+env:
+  PYTHON_VERSION: '3.11'
+  
+jobs:
+  # 1️⃣ Kod Kalitesi Kontrolü
+  code-quality:
+    name: 🔍 Kod Kalitesi
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Kodu İndir
+      uses: actions/checkout@v4
+    
+    - name: 🐍 Python Kur
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+    
+    - name: 📦 Bağımlılıkları Yükle
+      run: |
+        pip install --upgrade pip
+        pip install -r config/requirements-dev.txt
+    
+    - name: 🎨 Code Style (Black)
+      run: |
+        black --check src/ tests/
+    
+    - name: 🔧 Linting (Flake8)
+      run: |
+        flake8 src/ tests/ --max-line-length=88 --extend-ignore=E203,W503
+    
+    - name: 🏷️ Type Checking (MyPy)
+      run: |
+        mypy src/ --ignore-missing-imports
+      continue-on-error: true  # Type checking opsiyonel
+
+  # 2️⃣ Unit Testleri
+  unit-tests:
+    name: 🧪 Unit Testler
+    runs-on: ubuntu-latest
+    needs: code-quality
+    
+    strategy:
+      matrix:
+        python-version: ['3.9', '3.10', '3.11', '3.12']
+    
+    steps:
+    - name: 📥 Kodu İndir
+      uses: actions/checkout@v4
+    
+    - name: 🐍 Python ${{ matrix.python-version }} Kur
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+    
+    - name: 📦 Bağımlılıkları Yükle
+      run: |
+        pip install --upgrade pip
+        pip install -r config/requirements-dev.txt
+    
+    - name: 🧪 Testleri Çalıştır
+      run: |
+        python -m pytest tests/ -v \
+          --cov=src/ \
+          --cov-report=xml \
+          --cov-report=html \
+          --cov-fail-under=80
+    
+    - name: 📊 Coverage Raporu Yükle
+      uses: codecov/codecov-action@v3
+      if: matrix.python-version == '3.11'
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+
+  # 3️⃣ Güvenlik Taraması
+  security-scan:
+    name: 🔒 Güvenlik Tarama
+    runs-on: ubuntu-latest
+    needs: code-quality
+    
+    steps:
+    - name: 📥 Kodu İndir
+      uses: actions/checkout@v4
+    
+    - name: 🐍 Python Kur
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: 📦 Security Tools Yükle
+      run: |
+        pip install safety bandit
+    
+    - name: 🛡️ Dependency Vulnerability Scan
+      run: |
+        safety check --json || true
+    
+    - name: 🔍 Code Security Scan (Bandit)
+      run: |
+        bandit -r src/ -f json || true
+
+  # 4️⃣ Docker Build Test
+  docker-build:
+    name: 🐳 Docker Build
+    runs-on: ubuntu-latest
+    needs: [unit-tests, security-scan]
+    
+    steps:
+    - name: 📥 Kodu İndir
+      uses: actions/checkout@v4
+    
+    - name: 🔧 Docker Buildx Kur
+      uses: docker/setup-buildx-action@v3
+    
+    - name: 🐳 Docker Image Build
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: false
+        tags: cicd-example:test
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+    
+    - name: 🧪 Docker Image Test
+      run: |
+        # Container'ı çalıştır
+        docker run -d --name test-container -p 5000:5000 cicd-example:test
+        
+        # Container'ın başlamasını bekle
+        sleep 10
+        
+        # Health check
+        curl -f http://localhost:5000/health || exit 1
+        
+        # Container'ı durdur
+        docker stop test-container
+        docker rm test-container
+
+  # 5️⃣ Performance Testleri
+  performance-tests:
+    name: ⚡ Performance Test
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    if: github.event_name == 'pull_request'
+    
+    steps:
+    - name: 📥 Kodu İndir
+      uses: actions/checkout@v4
+    
+    - name: 🐍 Python Kur
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: 📦 Bağımlılıkları Yükle
+      run: |
+        pip install --upgrade pip
+        pip install -r config/requirements-dev.txt
+        pip install locust
+    
+    - name: 🚀 API'yi Başlat
+      run: |
+        python src/app.py &
+        sleep 5
+    
+    - name: ⚡ Load Test
+      run: |
+        # Basit performance testi
+        python -c "
+        import requests
+        import time
+        
+        # 100 istek gönder
+        times = []
+        for i in range(100):
+            start = time.time()
+            response = requests.get('http://localhost:5000/health')
+            end = time.time()
+            times.append(end - start)
+            assert response.status_code == 200
+        
+        avg_time = sum(times) / len(times)
+        print(f'Ortalama response time: {avg_time:.3f}s')
+        assert avg_time < 0.1  # 100ms'den az olmalı
+        "
+
+  # 6️⃣ Sonuç Bildirimi
+  ci-results:
+    name: 📊 CI Sonuçları
+    runs-on: ubuntu-latest
+    needs: [code-quality, unit-tests, security-scan, docker-build]
+    if: always()
+    
+    steps:
+    - name: 📊 Sonuçları Kontrol Et
+      run: |
+        echo "🔍 Kod Kalitesi: ${{ needs.code-quality.result }}"
+        echo "🧪 Unit Testler: ${{ needs.unit-tests.result }}"
+        echo "🔒 Güvenlik Tarama: ${{ needs.security-scan.result }}"
+        echo "🐳 Docker Build: ${{ needs.docker-build.result }}"
+        
+        if [[ "${{ needs.code-quality.result }}" == "success" && \
+              "${{ needs.unit-tests.result }}" == "success" && \
+              "${{ needs.security-scan.result }}" == "success" && \
+              "${{ needs.docker-build.result }}" == "success" ]]; then
+          echo "✅ Tüm CI kontrolleri başarılı!"
+          echo "ready_for_deployment=true" >> $GITHUB_OUTPUT
+        else
+          echo "❌ Bazı CI kontrolleri başarısız!"
+          echo "ready_for_deployment=false" >> $GITHUB_OUTPUT
+          exit 1
+        fi
+    
+    outputs:
+      ready_for_deployment: ${{ steps.check.outputs.ready_for_deployment }}
+
+# Workflow tamamlandığında bildirim gönder
+  notification:
+    name: 📢 Bildirim
+    runs-on: ubuntu-latest
+    needs: ci-results
+    if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: 📢 Slack Bildirimi
+      if: always()
+      run: |
+        if [[ "${{ needs.ci-results.result }}" == "success" ]]; then
+          echo "✅ CI başarılı - Main branch'e merge için hazır!"
+          # Burada Slack webhook kullanabilirsiniz
+          # curl -X POST -H 'Content-type: application/json' \
+          #   --data '{"text":"✅ CI Pipeline başarılı!"}' \
+          #   $SLACK_WEBHOOK_URL
+        else
+          echo "❌ CI başarısız - Deployment durduruldu!"
+          # curl -X POST -H 'Content-type: application/json' \
+          #   --data '{"text":"❌ CI Pipeline başarısız!"}' \
+          #   $SLACK_WEBHOOK_URL
+        fi
