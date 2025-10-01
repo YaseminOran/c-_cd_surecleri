@@ -1,9 +1,9 @@
-name: 🧪 Test Workflow (Feature Branches)
+name: 🧪 Hızlı Test Workflow
 
-# Feature branch'lerde sadece testleri çalıştır
+# Tüm branch'lerde hızlı testleri çalıştır
 on:
   push:
-    branches-ignore: [ main, develop ]
+    branches: [ main, develop, feature/* ]
   
   pull_request:
     types: [ opened, synchronize, reopened ]
