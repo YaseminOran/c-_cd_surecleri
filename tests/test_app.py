@@ -101,7 +101,7 @@ class TestPredictEndpointExtended:
     def test_predict_endpoint_no_json(self, client):
         """JSON olmadan prediction endpoint testi"""
         response = client.post("/predict", data="not json")
-        
+
         assert response.status_code == 400
         data = response.get_json()
         assert data["status"] == "error"
@@ -111,7 +111,7 @@ class TestPredictEndpointExtended:
         response = client.post(
             "/predict", data=json.dumps({}), content_type="application/json"
         )
-        
+
         assert response.status_code == 200  # Boş dict valid
         data = response.get_json()
         assert data["status"] == "success"
@@ -122,7 +122,7 @@ class TestPredictEndpointExtended:
         response = client.post(
             "/predict", data=json.dumps(test_data), content_type="text/plain"
         )
-        
+
         assert response.status_code == 400
         data = response.get_json()
         assert data["status"] == "error"
@@ -149,7 +149,7 @@ class TestPredictEndpointExtended:
         response = client.post(
             "/predict", data=json.dumps(test_data), content_type="application/json"
         )
-        
+
         assert response.status_code == 200
         data = response.get_json()
         assert data["status"] == "success"
@@ -161,7 +161,7 @@ class TestErrorHandlers:
     def test_404_error_handler(self, client):
         """404 hata işleyici testi"""
         response = client.get("/nonexistent-endpoint")
-        
+
         assert response.status_code == 404
         data = response.get_json()
         assert data["status"] == "error"
@@ -171,7 +171,7 @@ class TestErrorHandlers:
         """Desteklenmeyen HTTP metodu testi"""
         # Health endpoint sadece GET destekler
         response = client.post("/health")
-        
+
         assert response.status_code == 405
 
 
@@ -197,18 +197,18 @@ class TestMetricsEndpointExtended:
         response = client.get("/metrics")
         initial_data = response.get_json()
         initial_count = initial_data["total_predictions"]
-        
+
         # Bir tahmin yap
         test_data = {"value": 50}
         client.post(
             "/predict", data=json.dumps(test_data), content_type="application/json"
         )
-        
+
         # Metrikleri tekrar kontrol et
         response = client.get("/metrics")
         assert response.status_code == 200
         data = response.get_json()
-        
+
         # Tahmin sayısının arttığını kontrol et
         assert data["total_predictions"] >= initial_count
         assert "model_version" in data
@@ -218,15 +218,15 @@ class TestMetricsEndpointExtended:
         """Metrik endpoint yapı testi"""
         response = client.get("/metrics")
         data = response.get_json()
-        
+
         required_fields = [
-            "total_predictions", 
-            "uptime_seconds", 
-            "last_prediction", 
-            "model_version", 
-            "timestamp"
+            "total_predictions",
+            "uptime_seconds",
+            "last_prediction",
+            "model_version",
+            "timestamp",
         ]
-        
+
         for field in required_fields:
             assert field in data
 
@@ -238,11 +238,11 @@ class TestHomeEndpointExtended:
         """Ana sayfa endpoint yapı testi"""
         response = client.get("/")
         data = response.get_json()
-        
+
         required_fields = ["service", "version", "status", "endpoints", "timestamp"]
         for field in required_fields:
             assert field in data
-        
+
         # Endpoints yapısını kontrol et
         assert isinstance(data["endpoints"], dict)
         assert len(data["endpoints"]) > 0
@@ -264,31 +264,33 @@ class TestApplicationIntegration:
         # 1. Ana sayfa kontrolü
         response = client.get("/")
         assert response.status_code == 200
-        
+
         # 2. Sağlık kontrolü
         response = client.get("/health")
         assert response.status_code in [200, 503]
-        
+
         # 3. İlk metrik durumu
         response = client.get("/metrics")
         initial_metrics = response.get_json()
-        
+
         # 4. Tahmin yap
         test_data = {"value": 75}
         response = client.post(
             "/predict", data=json.dumps(test_data), content_type="application/json"
         )
         assert response.status_code == 200
-        
+
         # 5. Metrikleri tekrar kontrol et
         response = client.get("/metrics")
         final_metrics = response.get_json()
-        assert final_metrics["total_predictions"] >= initial_metrics["total_predictions"]
+        assert (
+            final_metrics["total_predictions"] >= initial_metrics["total_predictions"]
+        )
 
     def test_concurrent_predictions(self, client):
         """Eşzamanlı tahmin testleri"""
         test_values = [10, 30, 50, 70, 90]
-        
+
         for value in test_values:
             test_data = {"value": value}
             response = client.post(
@@ -306,17 +308,17 @@ class TestExceptionHandling:
     def test_prediction_error_simulation(self, client):
         """Prediction error simülasyonu"""
         from app import model
-        
+
         # Model'i error state'e sok
         model.simulate_error()
-        
+
         # Health check unhealthy dönmeli
         response = client.get("/health")
         assert response.status_code == 503
-        
+
         # Model'i recover et
         model.recover()
-        
+
         # Health check tekrar healthy dönmeli
         response = client.get("/health")
         assert response.status_code == 200
@@ -326,7 +328,7 @@ class TestExceptionHandling:
         # Bu testi gerçekleştirmek için model'de hata oluşturacak bir durum yaratmak gerek
         # Normalde bu test için model.predict'te exception raise etmek gerekir
         # Ancak mevcut kod yapısında bu zor, bu yüzden basic bir test yapıyoruz
-        
+
         response = client.get("/")
         assert response.status_code == 200  # Normal durum
 
@@ -338,6 +340,7 @@ class TestAppMainFunction:
         """App import testi"""
         try:
             from app import app
+
             assert app is not None
         except ImportError:
             assert False, "App import failed"

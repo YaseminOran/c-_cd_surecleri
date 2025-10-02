@@ -107,13 +107,13 @@ class TestSimpleModel:
     def test_model_last_prediction_time(self):
         """Son tahmin zamanı testi"""
         model = SimpleModel()
-        
+
         # İlk durum - henüz tahmin yapılmamış
         assert model.get_last_prediction_time() is None
-        
+
         # Tahmin yap
         model.predict({"value": 50})
-        
+
         # Son tahmin zamanı set olmalı
         last_time = model.get_last_prediction_time()
         assert last_time is not None
@@ -134,11 +134,11 @@ class TestSimpleModel:
     def test_model_reset_stats(self):
         """İstatistik sıfırlama testi"""
         model = SimpleModel()
-        
+
         # İlk tahmin
         model.predict({"value": 50})
         assert model.get_prediction_count() > 0
-        
+
         # Stats sıfırla
         model.reset_stats()
         assert model.get_prediction_count() == 0
@@ -147,10 +147,10 @@ class TestSimpleModel:
     def test_model_simulate_error(self):
         """Hata simülasyonu testi"""
         model = SimpleModel()
-        
+
         # Normal durum
         assert model.is_healthy() is True
-        
+
         # Hata simülasyonu
         model.simulate_error()
         assert model.is_healthy() is False
@@ -158,11 +158,11 @@ class TestSimpleModel:
     def test_model_recover(self):
         """Model kurtarma testi"""
         model = SimpleModel()
-        
+
         # Hata simülasyonu
         model.simulate_error()
         assert model.is_healthy() is False
-        
+
         # Kurtarma
         model.recover()
         assert model.is_healthy() is True
@@ -170,7 +170,7 @@ class TestSimpleModel:
     def test_model_predict_error_handling(self):
         """Tahmin hata işleme testi"""
         model = SimpleModel()
-        
+
         # Geçersiz value tipi
         try:
             model.predict({"value": "invalid"})
@@ -185,7 +185,7 @@ class TestModelMainFunction:
     def test_model_main_function(self):
         """Model main fonksiyon testi"""
         from model import test_model
-        
+
         # Test that main function runs without errors
         try:
             test_model()
