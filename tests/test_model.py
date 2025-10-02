@@ -20,6 +20,18 @@ class TestSimpleModel:
         model = SimpleModel()
         assert model is not None
 
+    def test_model_predict_with_value(self):
+        """Değer ile tahmin testi - CI/CD için kritik test"""
+        model = SimpleModel()
+        test_data = {"value": 50}
+
+        result = model.predict(test_data)
+
+        assert result is not None
+        assert isinstance(result, dict)  # Model dict döndürüyor
+        assert "prediction" in result
+        assert 0 <= result["prediction"] <= 1
+
     def test_model_predict_basic(self):
         """Temel tahmin testi"""
         model = SimpleModel()
