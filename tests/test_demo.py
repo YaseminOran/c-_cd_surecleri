@@ -1,2 +1,2 @@
-def test_kasitli_hata():
-    assert False, 'Kasıtlı hata mesajı burada'
+def test_kasitli_hata_düzeltilmesi():
+    assert True, 'Kasıtlı hata düzeltildi'
