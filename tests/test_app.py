@@ -62,7 +62,7 @@ class TestBasicEndpoints:
     
     def test_predict_endpoint_invalid(self, client):
         """Geçersiz prediction endpoint'ini test et"""
-        test_data = {'invalid': 'data'}
+        test_data = {'value': 150}  # Range dışı değer
         response = client.post('/predict',
                              data=json.dumps(test_data),
                              content_type='application/json')

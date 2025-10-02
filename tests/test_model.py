@@ -28,8 +28,9 @@ class TestSimpleModel:
         result = model.predict(test_data)
         
         assert result is not None
-        assert isinstance(result, (int, float))
-        assert 0 <= result <= 1
+        assert isinstance(result, dict)  # Model dict döndürüyor
+        assert 'prediction' in result
+        assert 0 <= result['prediction'] <= 1
     
     def test_model_predict_low_value(self):
         """Düşük değer testi"""
@@ -39,7 +40,8 @@ class TestSimpleModel:
         result = model.predict(test_data)
         
         assert result is not None
-        assert isinstance(result, (int, float))
+        assert isinstance(result, dict)
+        assert 'prediction' in result
     
     def test_model_predict_high_value(self):
         """Yüksek değer testi"""
@@ -49,7 +51,8 @@ class TestSimpleModel:
         result = model.predict(test_data)
         
         assert result is not None
-        assert isinstance(result, (int, float))
+        assert isinstance(result, dict)
+        assert 'prediction' in result
     
     def test_model_health_check(self):
         """Model sağlık kontrolü"""
