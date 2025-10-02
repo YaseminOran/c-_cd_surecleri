@@ -231,3 +231,5 @@ jobs:
 
 **🎯 Bu örnek ile modern software development'ta vazgeçilmez olan CI/CD süreçlerini öğreneceksiniz!**
 # Test
+
+#denem12
