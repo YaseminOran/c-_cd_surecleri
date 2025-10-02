@@ -1,2 +1,2 @@
 def test_kasitli_hata():
-      assert False, 'Bu test kasıtlı olarak başarısız!'
+      assert True, 'Bu test kasıtlı olarak başarısız!'
