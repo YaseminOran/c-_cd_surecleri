@@ -4,15 +4,16 @@ Basit Flask App Testleri - CI/CD Pipeline için
 Sadece çalışan temel testler
 """
 
-import pytest
 import json
-import sys
 import os
+import sys
+
+import pytest
 
 # Src dizinini path'e ekle
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from app import app
+from app import app  # noqa: E402
 
 
 @pytest.fixture
